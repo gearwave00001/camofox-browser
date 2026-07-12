@@ -1,0 +1,12 @@
+services:
+  camofox-browser:
+    image: camofox-browser:latest
+    container_name: camofox-browser
+    restart: unless-stopped
+    ports:
+      - "9377:9377"
+      - "6080:6080"
+    environment:
+      - ENABLE_VNC=1
+      - VNC_BIND=0.0.0.0
+      - NODE_OPTIONS=--max-old-space-size=4096

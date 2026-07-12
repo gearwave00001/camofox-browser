@@ -685,6 +685,21 @@ function getTotalTabCount() {
 // Virtual display for WebGL support and anti-detection.
 // Xvfb gives Firefox a real X display with GLX, enabling software-rendered WebGL
 // via Mesa llvmpipe. Without this, WebGL returns "no context" -- a massive bot signal.
+const DEFAULT_VIRTUAL_DISPLAY_RESOLUTION = '1280x720x24';
+
+class DefaultVirtualDisplay extends VirtualDisplay {
+  get xvfb_args() {
+    const args = super.xvfb_args;
+    const idx = args.indexOf('0');
+    if (idx > 0 && args[idx - 1] === '-screen') {
+      const patched = [...args];
+      patched[idx + 1] = DEFAULT_VIRTUAL_DISPLAY_RESOLUTION;
+      return patched;
+    }
+    return args;
+  }
+}
+
 let virtualDisplay = null;
 let browserLaunchProxy = null;
 let externalCamoufoxLaunch = null;
@@ -707,7 +722,7 @@ async function probeGoogleSearch(candidateBrowser) {
   let context = null;
   try {
     context = await candidateBrowser.newContext({
-      viewport: { width: 1280, height: 720 },
+      viewport: null,
       permissions: ['geolocation'],
     });
     const page = await context.newPage();
@@ -952,7 +967,7 @@ async function launchBrowserInstance() {
     try {
       if (os.platform() === 'linux') {
         localVirtualDisplay = pluginCtx.createVirtualDisplay();
-        vdDisplay = localVirtualDisplay.get();
+        vdDisplay = await localVirtualDisplay.get();
         log('info', 'xvfb virtual display started', { display: vdDisplay, attempt });
       }
     } catch (err) {
@@ -1177,7 +1192,7 @@ async function getSession(userId, { trace = false } = {}) {
       }
       const b = await ensureBrowser();
       const contextOptions = {
-        viewport: { width: 1280, height: 720 },
+        viewport: null,
         permissions: ['geolocation'],
       };
       // When geoip is active (proxy configured), camoufox auto-configures
@@ -6055,7 +6070,7 @@ const pluginCtx = {
   metricsRegistry: getRegister,
   createMetric,
   /** Factory for Xvfb virtual display. Plugins can replace this to customise resolution/args. */
-  createVirtualDisplay: () => new VirtualDisplay(),
+  createVirtualDisplay: () => new DefaultVirtualDisplay(),
   /** The upstream VirtualDisplay class -- plugins can subclass it. */
   VirtualDisplay,
 };

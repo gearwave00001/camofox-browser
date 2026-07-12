@@ -70,6 +70,15 @@ COPY scripts/ ./scripts/
 # Install default plugin dependencies (apt packages + post-install hooks)
 RUN sh scripts/install-plugin-deps.sh
 
+#Patch vnc-watcher.sh heartbeat bug
+#    The watcher loses track of x11vnc when it crashes, so it never re-attaches.
+#    This adds a heartbeat check that clears stale PID/display state before the while loop.
+RUN sed -i '/^while true/i \
+    _CAMOFOX_HEARTBEAT: clear stale x11vnc PID so watcher re-attaches\n\
+    if [ -n "$X11VNC_PID" ] && ! kill -0 "$X11VNC_PID" 2>/dev/null; then\n\
+      X11VNC_PID=""; CURRENT_DISPLAY=""\n\
+    fi' /app/plugins/vnc/vnc-watcher.sh
+
 ENV NODE_ENV=production
 ENV CAMOFOX_PORT=9377
 
